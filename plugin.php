@@ -19,7 +19,7 @@ Author URI:     http://github.com/vaughany/
  * https://github.com/YOURLS/YOURLS/wiki/Coding-Standards
  * https://github.com/YOURLS/YOURLS/wiki#for-developpers
  * https://github.com/YOURLS/YOURLS/wiki/Plugin-List#get-your-plugin-listed-here
-*/
+ */
 
 // No direct call.
 if ( !defined ('YOURLS_ABSPATH') ) { die(); }
@@ -90,7 +90,7 @@ function vaughany_bias_import_urls( $file ) {
     $count  = 0;
     $fh     = fopen( $file['tmp_name'], 'r' );
     $table  = YOURLS_DB_TABLE_URL;
-
+    $csvData = array();
     // If the file handle is okay.
     if ( $fh ) {
 
@@ -110,11 +110,46 @@ function vaughany_bias_import_urls( $file ) {
 
             if ( $result['status'] == 'success' ) {
                 $count++;
+                $innerCSV = array();
+                array_push($innerCSV, $result['url']['url']);
+                array_push($innerCSV, $result['shorturl']);
+                $csvSize = count($csv);
+                if($csvSize > 2){
+                    for($i = 2; $i < $csvSize; $i++){
+                        array_push($innerCSV, $csv[$i]);
+                    }
+                }
+                array_push($csvData, $innerCSV);
             }
         }
     } else {
         yourls_add_notice('File handle is bad.');
     }
-
+    exportCSV($csvData);
     return $count;
+}
+
+function exportCSV($csvData){
+
+    // output headers so that the file is downloaded rather than displayed
+    header('Content-type: text/csv');
+    header('Content-Disposition: attachment; filename="shortenURLs.csv"');
+
+    // do not cache the file
+    header('Pragma: no-cache');
+    header('Expires: 0');
+
+    // create a file pointer connected to the output stream
+    $file = fopen('php://output', 'w');
+
+    // send the column headers
+    fputcsv($file,array('Long URL', 'Short URL','Extra'));
+
+    // output each row of the data
+    foreach ($csvData as $row)
+    {
+        fputcsv($file, $row);
+    }
+    exit(0);
+
 }
