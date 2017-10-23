@@ -90,6 +90,7 @@ function vaughany_bias_import_urls( $file ) {
     $fh     = fopen( $file['tmp_name'], 'r' );
     $table  = YOURLS_DB_TABLE_URL;
     $csvData = array();
+    $csvHeaders = array();
     // If the file handle is okay.
     if ( $fh ) {
 
@@ -97,7 +98,7 @@ function vaughany_bias_import_urls( $file ) {
         $flag = 0;
         while ( $csv = fgetcsv( $fh, 1000, ',' ) ) {
             $flag++;
-            if($flag != 1 && stripos($csv[0], 'original') === false && stripos($csv[0], 'short') === false){
+            if($flag != 1 && (stripos($csv[0], 'original') === false || stripos($csv[0], 'long') === false ) && stripos($csv[0], 'short') === false){
                 // Trim out cruft and slashes.
                 $keyword = trim( str_replace( '/', '', $csv[1] ) );
 
@@ -123,16 +124,23 @@ function vaughany_bias_import_urls( $file ) {
                     array_push($csvData, $innerCSV);
                 }
             }
+            else{
+                for($i = 0; $i < count($csv); $i++){
+                    array_push($csvHeaders, $csv[$i]);
+                }
+
+            }
         }
     } else {
         yourls_add_notice('File handle is bad.');
     }
-    exportCSV($csvData);
+    exportCSV($csvHeaders, $csvData);
     return $count;
 }
 
-function exportCSV($csvData){
+function exportCSV($csvHeaders, $csvData){
 
+    header_remove('Set-Cookie');
     // output headers so that the file is downloaded rather than displayed
     header('Content-type: text/csv');
     header('Content-Disposition: attachment; filename="shortenURLs.csv"');
@@ -145,12 +153,19 @@ function exportCSV($csvData){
     $file = fopen('php://output', 'w');
 
     // send the column headers
-    fputcsv($file,array('Long URL', 'Short URL','Extra'));
+    fputcsv($file,$csvHeaders);
 
     // output each row of the data
+    $i = 0;
     foreach ($csvData as $row)
     {
         fputcsv($file, $row);
+        $i++;
+        if ($i % 100 == 0) {
+            flush(); /* Attempt to flush output to the browser every 100 lines.
+                        You may want to tweak this number based upon the size
+                        of your CSV rows.*/
+        }
     }
     exit(0);
 
