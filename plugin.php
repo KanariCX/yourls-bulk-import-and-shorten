@@ -38,8 +38,8 @@ function vaughany_bias_add_page() {
 function vaughany_bias_display_page() {
     echo '<h2>Bulk Import and Shorten</h2>' . "\n";
     echo '<p>Import links as long URLs and let YOURLS shorten them for you according to your settings.</p>' . "\n";
-    echo '<p>Upload a .csv file in the following format:</p>' . "\n";
-    echo '<ul><li>First column - required: a long URL</li><li>Second column - optional: a short URL of your choosing (otherwise one will be created by YOURLS according to your settings)</li></ul>' . "\n";
+    echo '<p>Upload a .csv file in the following format: <a href="/user/plugins/bulk-import-and-shorten/sample-upload.csv">Sample upload file</a> </p>' . "\n";
+    echo '<ul><li>First column - required: a long URL</li><li>Second column - required: a short URL of your choosing (otherwise one will be created by YOURLS according to your settings) you may leave this empty</li><li>Third column - optional: meta data or something for reference</li></ul>' . "\n";
     echo '<p>I don\'t know what will happen if two short links point to the same long link - this might or might not be allowed, according to your settings.</p>' . "\n";
     //echo '<p></p>' . "\n";
 
@@ -50,7 +50,6 @@ function vaughany_bias_display_page() {
     echo '<input type="file" name="import" value="">' . "\n";
     echo '<input type="submit" name="import" value="Upload">' . "\n";
     echo '</form>' . "\n";
-
 }
 
 function vaughany_bias_handle_post() {
@@ -95,31 +94,34 @@ function vaughany_bias_import_urls( $file ) {
     if ( $fh ) {
 
         // Get each line in turn as an array, comma-separated.
+        $flag = 0;
         while ( $csv = fgetcsv( $fh, 1000, ',' ) ) {
+            $flag++;
+            if($flag != 1 && stripos($csv[0], 'original') === false && stripos($csv[0], 'short') === false){
+                // Trim out cruft and slashes.
+                $keyword = trim( str_replace( '/', '', $csv[1] ) );
 
-            // Trim out cruft and slashes.
-            $keyword = trim( str_replace( '/', '', $csv[1] ) );
-
-            // If the requested keyword is not free, use nothing.
-            if ( !yourls_keyword_is_free( $keyword ) ) {
-                $keyword = '';
-            }
-
-            // Add a new link (passing the keyword) and get the result.
-            $result = yourls_add_new_link( trim( $csv[0] ), $keyword );
-
-            if ( $result['status'] == 'success' ) {
-                $count++;
-                $innerCSV = array();
-                array_push($innerCSV, $result['url']['url']);
-                array_push($innerCSV, $result['shorturl']);
-                $csvSize = count($csv);
-                if($csvSize > 2){
-                    for($i = 2; $i < $csvSize; $i++){
-                        array_push($innerCSV, $csv[$i]);
-                    }
+                // If the requested keyword is not free, use nothing.
+                if ( !yourls_keyword_is_free( $keyword ) ) {
+                    $keyword = '';
                 }
-                array_push($csvData, $innerCSV);
+
+                // Add a new link (passing the keyword) and get the result.
+                $result = yourls_add_new_link( trim( $csv[0] ), $keyword );
+
+                if ( $result['status'] == 'success' ) {
+                    $count++;
+                    $innerCSV = array();
+                    array_push($innerCSV, $result['url']['url']);
+                    array_push($innerCSV, $result['shorturl']);
+                    $csvSize = count($csv);
+                    if($csvSize > 2){
+                        for($i = 2; $i < $csvSize; $i++){
+                            array_push($innerCSV, $csv[$i]);
+                        }
+                    }
+                    array_push($csvData, $innerCSV);
+                }
             }
         }
     } else {
@@ -153,3 +155,4 @@ function exportCSV($csvData){
     exit(0);
 
 }
+
