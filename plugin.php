@@ -89,6 +89,7 @@ function vaughany_bias_import_urls( $file ) {
     $count  = 0;
     $fh     = fopen( $file['tmp_name'], 'r' );
     $table  = YOURLS_DB_TABLE_URL;
+    $shortenFileName = pathinfo($_FILES['import']['name'], PATHINFO_FILENAME).'_shortened.csv';
     $csvData = array();
     $csvHeaders = array();
     // If the file handle is okay.
@@ -134,16 +135,16 @@ function vaughany_bias_import_urls( $file ) {
     } else {
         yourls_add_notice('File handle is bad.');
     }
-    exportCSV($csvHeaders, $csvData);
+    exportCSV($csvHeaders, $csvData, $shortenFileName);
     return $count;
 }
 
-function exportCSV($csvHeaders, $csvData){
+function exportCSV($csvHeaders, $csvData, $shortenFileName){
 
     header_remove('Set-Cookie');
     // output headers so that the file is downloaded rather than displayed
     header('Content-type: text/csv');
-    header('Content-Disposition: attachment; filename="shortenURLs.csv"');
+    header('Content-Disposition: attachment; filename="'.$shortenFileName.'"');
 
     // do not cache the file
     header('Pragma: no-cache');
